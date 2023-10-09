@@ -87,11 +87,43 @@ DirectSelect.dragVertex = function(state, e, delta) {
     }
   }));
 
+  const selectedPointCoord = selectedCoords[0];
+
+  // find in state.feature polygon the coordinates that have the same lng , and the same lat
+  const selectedPointCoordLat = selectedPointCoord[1];
+  const selectedPointCoordLng = selectedPointCoord[0];
+
+  const indexPointWithSameLatOnRectangle =
+    state.feature.coordinates[0].findIndex(
+      (pointOnRectangle) =>
+        pointOnRectangle[1] === selectedPointCoordLat &&
+        pointOnRectangle[0] !== selectedPointCoordLng
+    );
+  const indexPointWithSameLngOnRectangle =
+    state.feature.coordinates[0].findIndex(
+      (pointOnRectangle) =>
+        pointOnRectangle[0] === selectedPointCoordLng &&
+        pointOnRectangle[1] !== selectedPointCoordLat
+    );
+
   const constrainedDelta = constrainFeatureMovement(selectedCoordPoints, delta);
   for (let i = 0; i < selectedCoords.length; i++) {
     const coord = selectedCoords[i];
     state.feature.updateCoordinate(state.selectedCoordPaths[i], coord[0] + constrainedDelta.lng, coord[1] + constrainedDelta.lat);
   }
+
+    // update other vertex with corresponding lat
+    state.feature.coordinates[0][indexPointWithSameLatOnRectangle] = [
+      state.feature.coordinates[0][indexPointWithSameLatOnRectangle][0],
+      state.feature.coordinates[0][indexPointWithSameLatOnRectangle][1] +
+        constrainedDelta.lat,
+    ];
+    // update other vertex with corresponding lng
+    state.feature.coordinates[0][indexPointWithSameLngOnRectangle] = [
+      state.feature.coordinates[0][indexPointWithSameLngOnRectangle][0] +
+        constrainedDelta.lng,
+      state.feature.coordinates[0][indexPointWithSameLngOnRectangle][1],
+    ];
 };
 
 DirectSelect.clickNoTarget = function () {
@@ -153,7 +185,7 @@ DirectSelect.toDisplayFeatures = function(state, geojson, push) {
     push(geojson);
     createSupplementaryPoints(geojson, {
       map: this.map,
-      midpoints: true,
+      midpoints: false,
       selectedPaths: state.selectedCoordPaths
     }).forEach(push);
   } else {
