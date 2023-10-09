@@ -62,76 +62,36 @@ DirectSelect.onMidpoint = function(state, e) {
   state.selectedCoordPaths = [about.coord_path];
 };
 
-DirectSelect.pathsToCoordinates = function (featureId, paths) {
-  return paths.map((coord_path) => ({ feature_id: featureId, coord_path }));
+DirectSelect.pathsToCoordinates = function(featureId, paths) {
+  return paths.map(coord_path => ({ feature_id: featureId, coord_path }));
 };
 
-DirectSelect.onFeature = function (state, e) {
+DirectSelect.onFeature = function(state, e) {
   if (state.selectedCoordPaths.length === 0) this.startDragging(state, e);
   else this.stopDragging(state);
 };
 
-DirectSelect.dragFeature = function (state, e, delta) {
+DirectSelect.dragFeature = function(state, e, delta) {
   moveFeatures(this.getSelected(), delta);
   state.dragMoveLocation = e.lngLat;
 };
 
-DirectSelect.dragVertex = function (state, e, delta) {
-  const selectedCoords = state.selectedCoordPaths.map((coord_path) =>
-    state.feature.getCoordinate(coord_path)
-  );
-
-  const selectedPointCoord = selectedCoords[0];
-
-  // find in state.feature polygon the coordinates that have the same lng , and the same lat
-  const selectedPointCoordLat = selectedPointCoord[1];
-  const selectedPointCoordLng = selectedPointCoord[0];
-
-  const indexPointWithSameLatOnRectangle =
-    state.feature.coordinates[0].findIndex(
-      (pointOnRectangle) =>
-        pointOnRectangle[1] === selectedPointCoordLat &&
-        pointOnRectangle[0] !== selectedPointCoordLng
-    );
-  const indexPointWithSameLngOnRectangle =
-    state.feature.coordinates[0].findIndex(
-      (pointOnRectangle) =>
-        pointOnRectangle[0] === selectedPointCoordLng &&
-        pointOnRectangle[1] !== selectedPointCoordLat
-    );
-
-  const selectedCoordPoints = selectedCoords.map((coords) => ({
+DirectSelect.dragVertex = function(state, e, delta) {
+  const selectedCoords = state.selectedCoordPaths.map(coord_path => state.feature.getCoordinate(coord_path));
+  const selectedCoordPoints = selectedCoords.map(coords => ({
     type: Constants.geojsonTypes.FEATURE,
     properties: {},
     geometry: {
       type: Constants.geojsonTypes.POINT,
-      coordinates: coords,
-    },
+      coordinates: coords
+    }
   }));
 
   const constrainedDelta = constrainFeatureMovement(selectedCoordPoints, delta);
-
   for (let i = 0; i < selectedCoords.length; i++) {
     const coord = selectedCoords[i];
-    state.feature.updateCoordinate(
-      state.selectedCoordPaths[i],
-      coord[0] + constrainedDelta.lng,
-      coord[1] + constrainedDelta.lat
-    );
+    state.feature.updateCoordinate(state.selectedCoordPaths[i], coord[0] + constrainedDelta.lng, coord[1] + constrainedDelta.lat);
   }
-
-  // update other vertex with corresponding lat
-  state.feature.coordinates[0][indexPointWithSameLatOnRectangle] = [
-    state.feature.coordinates[0][indexPointWithSameLatOnRectangle][0],
-    state.feature.coordinates[0][indexPointWithSameLatOnRectangle][1] +
-      constrainedDelta.lat,
-  ];
-  // update other vertex with corresponding lng
-  state.feature.coordinates[0][indexPointWithSameLngOnRectangle] = [
-    state.feature.coordinates[0][indexPointWithSameLngOnRectangle][0] +
-      constrainedDelta.lng,
-    state.feature.coordinates[0][indexPointWithSameLngOnRectangle][1],
-  ];
 };
 
 DirectSelect.clickNoTarget = function () {
@@ -168,35 +128,33 @@ DirectSelect.onSetup = function(opts) {
     dragMoveLocation: opts.startPos || null,
     dragMoving: false,
     canDragMove: false,
-    selectedCoordPaths: opts.coordPath ? [opts.coordPath] : [],
+    selectedCoordPaths: opts.coordPath ? [opts.coordPath] : []
   };
 
-  this.setSelectedCoordinates(
-    this.pathsToCoordinates(featureId, state.selectedCoordPaths)
-  );
+  this.setSelectedCoordinates(this.pathsToCoordinates(featureId, state.selectedCoordPaths));
   this.setSelected(featureId);
   doubleClickZoom.disable(this);
 
   this.setActionableState({
-    trash: true,
+    trash: true
   });
 
   return state;
 };
 
-DirectSelect.onStop = function () {
+DirectSelect.onStop = function() {
   doubleClickZoom.enable(this);
   this.clearSelectedCoordinates();
 };
 
-DirectSelect.toDisplayFeatures = function (state, geojson, push) {
+DirectSelect.toDisplayFeatures = function(state, geojson, push) {
   if (state.featureId === geojson.properties.id) {
     geojson.properties.active = Constants.activeStates.ACTIVE;
     push(geojson);
     createSupplementaryPoints(geojson, {
       map: this.map,
-      midpoints: false,
-      selectedPaths: state.selectedCoordPaths,
+      midpoints: true,
+      selectedPaths: state.selectedCoordPaths
     }).forEach(push);
   } else {
     geojson.properties.active = Constants.activeStates.INACTIVE;
